@@ -1,9 +1,15 @@
 {
-  "name": "@einsenundnullen/better-nestjs-logger",
-  "version": "1.8.0",
+  "name": "@n0isy/better-nestjs-logger",
+  "version": "1.8.3",
   "description": "Better logger for NestJS, with json and no hassle",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "jest --verbose -i --detectOpenHandles",
     "lint": "eslint \"{src,__tests__}/**/*.ts\" --fix",
@@ -11,13 +17,9 @@
     "build": "tsc -p tsconfig.build.json",
     "watch": "tsc -p tsconfig.build.json --watch",
     "example": "rimraf dist && tsc && LOG_LEVEL=debug node dist/example/main",
-    "prepublishOnly": "npm run build && cp -r ./dist/* .",
-    "postpublish": "git clean -fd",
+    "prepublishOnly": "npm run build",
     "publish:npm": "npm run build && npm publish --access public"
   },
-  "files": [
-    "*.{js,d.ts}"
-  ],
   "engineStrict": true,
   "engines": {
     "node": ">=18"

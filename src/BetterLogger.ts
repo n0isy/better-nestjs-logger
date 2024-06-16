@@ -1,4 +1,4 @@
-import { ConsoleLogger, Inject, LogLevel } from '@nestjs/common';
+import { ConsoleLogger, ConsoleLoggerOptions, Inject, LogLevel, Optional } from '@nestjs/common';
 import util from 'util';
 import {
   BetterLoggerConfig,
@@ -7,22 +7,30 @@ import {
   PreparedMetaInfo,
 } from './model';
 
+const DEFAULT_LOG_LEVELS: LogLevel[] = [
+  'log',
+  'error',
+  'warn',
+  'debug',
+  'verbose',
+  'fatal',
+];
+
 export class BetterLogger extends ConsoleLogger {
   private readonly outputAsJson;
   private readonly logLevels: LogLevel[];
   private readonly getCustomFields;
 
-  constructor(@Inject(PARAMS_PROVIDER_TOKEN) options?: BetterLoggerConfig) {
-    super();
+  constructor(
+    @Optional() context?: string,
+    @Optional() consoleOptions: ConsoleLoggerOptions = {},
+    @Inject(PARAMS_PROVIDER_TOKEN) options?: BetterLoggerConfig,
+  ) {
+    super(context ?? "", consoleOptions);
+
     this.outputAsJson = options?.json ?? false;
     this.getCustomFields = options?.getCustomFields;
-    this.logLevels = options?.logLevel ?? [
-      'log',
-      'error',
-      'warn',
-      'debug',
-      'verbose',
-    ];
+    this.logLevels = options?.logLevel ?? DEFAULT_LOG_LEVELS;
   }
 
   error(...args: any[]) {
@@ -84,8 +92,8 @@ export class BetterLogger extends ConsoleLogger {
 
   private prepareMetaInfo(): PreparedMetaInfo {
     return {
-      pid: String(process.pid),
-      timestamp: new Date().toISOString(),
+      pid: process.pid,
+      timestamp: new Date().toISOString()
     };
   }
 
@@ -151,8 +159,10 @@ export class BetterLogger extends ConsoleLogger {
     message: PreparedMessageArgs,
     metaInfo: PreparedMetaInfo,
   ) {
-    const contextMessage = message.context ? `[${message.context}] ` : '';
+    const contextMessage = this.formatContext(message.context);
     const formattedLogLevel = logLevel.toUpperCase().padStart(7, ' ');
+    const pidMessage = this.formatPid(metaInfo.pid);
+    const timestampDiff = this.updateAndGetTimestampDiff();
 
     const stringMessage = String(
       [
@@ -173,10 +183,10 @@ export class BetterLogger extends ConsoleLogger {
     return this.formatMessage(
       logLevel,
       stringMessage,
-      `(${metaInfo.pid}) `,
+      pidMessage,
       formattedLogLevel,
       contextMessage,
-      '',
+      timestampDiff,
     );
   }
 
@@ -189,11 +199,11 @@ export class BetterLogger extends ConsoleLogger {
   ) {
     messages.forEach((message) => {
       const metaInfo = this.prepareMetaInfo();
-      const formatedMessage = this.outputAsJson
+      const formattedMessage = this.outputAsJson
         ? this.formatMessageJson(logLevel, message, metaInfo)
         : this.formatMessageString(logLevel, message, metaInfo);
 
-      process[writeStreamType].write(formatedMessage);
+      process[writeStreamType].write(formattedMessage);
     });
   }
 }

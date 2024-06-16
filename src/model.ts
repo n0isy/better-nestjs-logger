@@ -1,4 +1,4 @@
-import { LogLevel } from '@nestjs/common';
+import { LogLevel, ModuleMetadata, Type } from '@nestjs/common';
 
 export const PARAMS_PROVIDER_TOKEN = 'better-logger-config';
 
@@ -10,7 +10,7 @@ export type PreparedMessageArgs = {
 };
 
 export type PreparedMetaInfo = {
-  pid: string;
+  pid: number;
   timestamp: string;
 };
 
@@ -23,6 +23,18 @@ export type BetterLoggerRequestMiddlewareConfig = {
 export type BetterLoggerConfig = {
   json?: boolean;
   logLevel?: LogLevel[];
-  requestMiddleware?: BetterLoggerRequestMiddlewareConfig;
+  requestMiddleware?: BetterLoggerRequestMiddlewareConfig | boolean;
   getCustomFields?: (req?: any, res?: any) => Record<string, string>;
 };
+
+
+export interface BetterLoggerOptionsFactory {
+  createBetterLoggerOptions(): Promise<BetterLoggerConfig> | BetterLoggerConfig;
+}
+
+export interface BetterLoggerAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
+  useExisting?: Type<BetterLoggerOptionsFactory>;
+  useClass?: Type<BetterLoggerOptionsFactory>;
+  useFactory?: (...args: any[]) => Promise<BetterLoggerConfig> | BetterLoggerConfig;
+  inject?: any[];
+}

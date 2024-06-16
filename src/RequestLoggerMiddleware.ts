@@ -12,19 +12,21 @@ const NS_TO_MS = 1e6;
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
   private readonly logger = new Logger(RequestLoggerMiddleware.name);
-  private readonly logHeaders: boolean;
-  private readonly redactedHeaders: string[];
-  private readonly ignoredPaths: string[];
-  private readonly getCustomFields;
+  private readonly logHeaders: boolean = false;
+  private readonly redactedHeaders: string[] = [];
+  private readonly ignoredPaths: string[] = [];
+  private readonly getCustomFields?: (req?: any, res?: any) => Record<string, string>;
 
   constructor(@Inject(PARAMS_PROVIDER_TOKEN) config?: BetterLoggerConfig) {
-    this.logHeaders = config?.requestMiddleware?.headers ?? false;
-    this.redactedHeaders = config?.requestMiddleware?.redactedHeaders ?? [];
-    this.ignoredPaths = config?.requestMiddleware?.ignoredPaths ?? [];
+    if (config?.requestMiddleware && typeof config.requestMiddleware === "object") {
+      this.logHeaders = config?.requestMiddleware?.headers ?? false;
+      this.redactedHeaders = config?.requestMiddleware?.redactedHeaders ?? [];
+      this.ignoredPaths = config?.requestMiddleware?.ignoredPaths ?? [];
+    }
     this.getCustomFields = config?.getCustomFields;
   }
 
-  private prepareHeaders(headers: IncomingHttpHeaders) {
+  private prepareHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
     const reqHeaderNames = Object.keys(headers).map((k) =>
       String(k).toLowerCase(),
     );
@@ -48,7 +50,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS;
   }
 
-  private getCustomFieldData(request: Request, response: Response) {
+  private getCustomFieldData(request: Request, response: Response): Record<string, string> {
     try {
       if (this.getCustomFields) {
         const data = this.getCustomFields(request, response);
@@ -58,7 +60,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         return data;
       }
     } catch (error) {
-      console.error('Error getting trace context', error);
+      this.logger.error('Error getting trace context', error);
     }
     return {};
   }
@@ -71,10 +73,9 @@ export class RequestLoggerMiddleware implements NestMiddleware {
       return;
     }
 
-    const userAgent = request.get('user-agent') || '';
     const startTime = process.hrtime();
 
-    response.on('close', async () => {
+    response.on('close', () => {
       const { statusCode } = response;
 
       const reason = getReasonPhrase(statusCode);
@@ -94,8 +95,8 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
       const headerInfo = this.logHeaders
         ? {
-            headers: this.prepareHeaders(headers),
-          }
+          headers: this.prepareHeaders(headers),
+        }
         : {};
 
       const customFieldData = this.getCustomFieldData(request, response);
@@ -106,7 +107,6 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         status: statusCode,
         requestMethod: method,
         duration: durationMs,
-        userAgent,
         ...headerInfo,
         ...customFieldData,
       };
