@@ -16,6 +16,15 @@ const DEFAULT_LOG_LEVELS: LogLevel[] = [
   'fatal',
 ];
 
+const severityToLevel: Map<LogLevel, number> = new Map([
+  ['fatal', 0], // Emergency
+  ['error', 3], // Error
+  ['warn', 4], // Warning
+  ['log', 6], // Informational
+  ['debug', 7], // Debug
+  ['verbose', 7], // Debug
+]);
+
 export class BetterLogger extends ConsoleLogger {
   private readonly outputAsJson;
   private readonly logLevels: LogLevel[];
@@ -112,6 +121,7 @@ export class BetterLogger extends ConsoleLogger {
 
     return `${JSON.stringify({
       severity: logLevel,
+      level: severityToLevel.get(logLevel),
       message: message.message,
       payload: payload,
       context: message.context,
