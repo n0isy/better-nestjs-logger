@@ -1,6 +1,6 @@
 {
   "name": "@n0isy/better-nestjs-logger",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "description": "Better logger for NestJS, with json and no hassle",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -85,6 +85,7 @@
     "@nestjs/common": ">=10"
   },
   "dependencies": {
-    "http-status-codes": "^2.3.0"
+    "http-status-codes": "^2.3.0",
+    "safe-stable-stringify": "^2.4.3"
   }
 }

@@ -1,5 +1,5 @@
 import { ConsoleLogger, ConsoleLoggerOptions, Inject, LogLevel, Optional } from '@nestjs/common';
-import util from 'util';
+import { configure } from 'safe-stable-stringify';
 import {
   BetterLoggerConfig,
   PARAMS_PROVIDER_TOKEN,
@@ -24,6 +24,8 @@ const severityToLevel: Map<LogLevel, number> = new Map([
   ['debug', 7], // Debug
   ['verbose', 7], // Debug
 ]);
+
+const safeStringify = configure({ deterministic: false });
 
 export class BetterLogger extends ConsoleLogger {
   private readonly outputAsJson;
@@ -114,12 +116,12 @@ export class BetterLogger extends ConsoleLogger {
     const payload = message.args.reduce(
       (accumulator, value, index) => ({
         ...accumulator,
-        [`arg${index}`]: JSON.parse(this.safeStringify(value)),
+        [`arg${index}`]: value,
       }),
       {},
     );
 
-    return `${JSON.stringify({
+    return `${safeStringify({
       severity: logLevel,
       level: severityToLevel.get(logLevel),
       message: message.message,
@@ -129,24 +131,6 @@ export class BetterLogger extends ConsoleLogger {
       timestamp: metaInfo.timestamp,
       ...message.customFieldData,
     })}\n`;
-  }
-
-  private safeStringify(value?: unknown) {
-    if (!value) {
-      return '';
-    }
-    try {
-      if (value instanceof Error) {
-        return JSON.stringify(value, Object.getOwnPropertyNames(value));
-      }
-      return JSON.stringify(value);
-    } catch (error) {
-      try {
-        return JSON.stringify(util.inspect(value));
-      } catch (error) {
-        return String(value);
-      }
-    }
   }
 
   private getCustomFieldData() {
@@ -178,10 +162,10 @@ export class BetterLogger extends ConsoleLogger {
       [
         message.message || '',
         message.args && message.args.length > 0
-          ? message.args.map(this.safeStringify)
+          ? message.args.map(arg => safeStringify(arg))
           : '',
         Object.keys(message.customFieldData).length > 0
-          ? this.safeStringify(message.customFieldData)
+          ? safeStringify(message.customFieldData)
           : '',
       ]
         .flat()
@@ -202,7 +186,7 @@ export class BetterLogger extends ConsoleLogger {
 
   protected async printMessages(
     messages: PreparedMessageArgs[],
-    // ignore this context. we got it already
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     context = '',
     logLevel: LogLevel = 'log',
     writeStreamType: 'stdout' | 'stderr' = 'stdout',
